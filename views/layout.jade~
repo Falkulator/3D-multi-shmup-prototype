@@ -1,0 +1,13 @@
+!!!
+html
+  head
+    title= webgl game
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src='/javascripts/player.js')
+    script
+      var onlineplayers = [];
+      var socket = io.connect('http://localhost', {port: 8001, transports: ["websocket"]});
+      socket.on('news', function (data) {
+        console.log(data);
+        });
+  body!= body

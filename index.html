@@ -1,0 +1,205 @@
+
+<html>
+<head>
+<script type="text/javascript" src='/socket.io/socket.io.js'></script>
+<script type="text/javascript" src='/javascripts/player.js'></script>
+<script type="text/javascript" src="/javascripts/glge-compiled-min.js"></script> 
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script> 
+
+</head>
+<body>
+	<div id="charselect" style="width:80px;">
+		<div id="names">
+		 Identify: <input type="text" name="fname" id="nameb" /><br />
+		 <button type="button"  onclick="submit()">Enter</button> <br />
+		</div>
+		<div id="Playerson">
+		 <ul id="online">
+		  <h3>Who's Online</h3>
+		 </ul>
+		</div>
+	</div>
+	<div id="gameframe">
+		<canvas id="canvas1"></canvas>
+	</div>
+	
+
+
+<script>
+  var entities = [];
+  var entity;
+  var selfuid;
+  var selfname;
+
+  
+  //webgl start
+    
+  var gameScene;
+  var doc = new GLGE.Document();
+  var gameRenderer=new GLGE.Renderer(document.getElementById('canvas1'));
+    doc.load("./images/glge.xml");
+
+	doc.onLoad=function(){
+
+	//create the renderer
+		
+		gameScene=new GLGE.Scene();
+		gameScene=doc.getElement("mainscene");
+		gameRenderer.setScene(gameScene);
+		
+
+		function render(){
+			updateEntities();
+			gameRenderer.render();
+
+		}	
+
+		setInterval(render,33);
+
+		function updateEntities(){
+			var i;
+			for (i = 0; i < entities.length; i++) {
+				entities[i].entobj.setLocX(entities[i].x);
+				entities[i].entobj.setLocY(entities[i].y);
+			}
+		}
+	
+			
+	}
+
+	
+	
+  
+  function addEntity(entity){
+	entity.entobj = new GLGE.Object(entity.uid);
+	entity.entobj.setMesh(doc.getElement('cube'));
+	entity.entobj.setMaterial(doc.getElement('cubeMat'));
+	entity.entobj.setScale(0.4);
+	entity.entobj.setLocZ(-10);
+	gameScene.addObject(entity.entobj);
+	entities.push(entity);
+  }
+  
+  function removeEntity(entity){
+	gameScene.removeChild(entity.entobj);
+    entities.splice(entities.indexOf(entity), 1);
+
+console.log(entity);
+	
+  }
+	
+	//Sockets Start
+	
+  var socket = io.connect('localhost', {port: 3000, transports: ["websocket"]});
+  
+  socket.on('news', function (data) {
+    console.log(data);
+
+  });
+  socket.on('newplayer', function(data){
+  	li = document.createElement('li');
+  	li.innerHTML =  data.user;
+  	li.setAttribute('id',data.id);
+  	document.getElementById('online').appendChild(li);
+  });
+  socket.on('removeplayer', function(data){
+  	li = document.getElementById(data.id);
+  	document.getElementById('online').removeChild(li);
+  	var ent = entityById(data.id);
+  	removeEntity(ent);	
+  });
+  socket.on('entityUpdate', function(data){
+  	
+    var ent = entityByUid(data.uid);
+      if (!ent){
+    	addEntity(data);
+      }
+	  
+	ent.x = data.x;
+	ent.y = data.y;
+				
+	  
+		
+  });
+  socket.on('selfid', function(data){
+	selfuid = data.uid;
+  });
+
+
+
+  function submit(){
+    socket.emit('onNewPlayer',{player: {user: document.getElementById('nameb').value}});
+    var names = document.getElementById('names');
+    li = document.createElement('li');
+    li.innerHTML = document.getElementById('nameb').value;
+    document.getElementById('online').appendChild(li);
+    document.getElementById('charselect').removeChild(names);
+    };
+    
+  function keyEvent(e){
+	var evtobj=window.event? event : e //distinguish between IE's explicit event object (window.event) and Firefox's implicit.
+	var unicode=evtobj.charCode? evtobj.charCode : evtobj.keyCode
+	var actualkey=String.fromCharCode(unicode)
+	if (actualkey=="w")
+		movePlayer('0');
+	if (actualkey=="s")
+		movePlayer('1');
+	if (actualkey=="a")
+		movePlayer('2');
+	if (actualkey=="d")
+		movePlayer('3');
+  };
+  
+  function movePlayer(d){
+  	if (d == '0'){
+  		socket.emit('movePlayer',{dy: 0.3, dx: 0.0, uid: selfuid });
+	}	
+  	if (d == '1'){
+  		socket.emit('movePlayer',{dy: -0.3, dx: 0.0, uid: selfuid});
+	}
+  	if (d == '2'){
+  		socket.emit('movePlayer',{dy: 0.0, dx: -0.3, uid: selfuid});
+	}
+  	if (d == '3'){
+  		socket.emit('movePlayer',{dy: 0.0, dx: 0.3, uid: selfuid});
+	}  
+  };
+document.onkeypress=keyEvent;
+
+// Find entitiy by uid
+function entityByUid(uid) {
+	var i;
+	for (i = 0; i < entities.length; i++) {
+		if (entities[i].uid == uid)
+			return entities[i];
+	};
+	
+	return false;
+};
+// Find entitiy by id
+function entityById(id) {
+	var i;
+	for (i = 0; i < entities.length; i++) {
+		if (entities[i].id == id)
+			return entities[i];
+	};
+	
+	return false;
+};
+
+
+// Find player by ID
+function playerById(id) {
+	var i;
+	for (i = 0; i < players.length; i++) {
+		if (players[i].id == id)
+			return players[i];
+	};
+	
+	return false;
+};
+
+</script>
+
+</body>
+</html>
