@@ -5,7 +5,7 @@
 <script type="text/javascript" src='/javascripts/player.js'></script>
 <script type="text/javascript" src="/javascripts/glge-compiled-min.js"></script> 
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script> 
-
+<style type="text/css" src="/stylesheets/style.css"></style>
 </head>
 <body>
 	<div id="charselect" style="width:80px;">
@@ -33,10 +33,12 @@
 
   
   //webgl start
-    
+  var canvas = document.getElementById('canvas1');  
   var gameScene;
   var doc = new GLGE.Document();
   var gameRenderer=new GLGE.Renderer(document.getElementById('canvas1'));
+  var mouse=new GLGE.MouseInput(document.getElementById('canvas1'));
+  var keys=new GLGE.KeyInput();
     doc.load("./images/glge.xml");
 
 	doc.onLoad=function(){
@@ -49,9 +51,15 @@
 		
 
 		function render(){
+			var x;
+			var y;
 			updateEntities();
 			gameRenderer.render();
-
+			checkkeys();
+			x = canvas.width = window.innerWidth;
+			y = canvas.height = window.innerHeight;
+			gameScene.camera.setAspect(x/y);
+			
 		}	
 
 		setInterval(render,33);
@@ -67,7 +75,16 @@
 			
 	}
 
+  function mouselook(){
 	
+  }
+  function checkkeys(){
+	if(keys.isKeyPressed(GLGE.KI_M)) {}
+	if(keys.isKeyPressed(GLGE.KI_W)) {socket.emit('movePlayer',{dy: 0.1, dx: 0.0, uid: selfuid });}
+	if(keys.isKeyPressed(GLGE.KI_S)) {socket.emit('movePlayer',{dy: -0.1, dx: 0.0, uid: selfuid });}
+	if(keys.isKeyPressed(GLGE.KI_A)) {socket.emit('movePlayer',{dy: 0.0, dx: -0.1, uid: selfuid });}
+	if(keys.isKeyPressed(GLGE.KI_D)) {socket.emit('movePlayer',{dy: 0.0, dx: 0.1, uid: selfuid });}
+  }
 	
   
   function addEntity(entity){
@@ -136,35 +153,35 @@ console.log(entity);
     document.getElementById('charselect').removeChild(names);
     };
     
-  function keyEvent(e){
-	var evtobj=window.event? event : e //distinguish between IE's explicit event object (window.event) and Firefox's implicit.
-	var unicode=evtobj.charCode? evtobj.charCode : evtobj.keyCode
-	var actualkey=String.fromCharCode(unicode)
-	if (actualkey=="w")
-		movePlayer('0');
-	if (actualkey=="s")
-		movePlayer('1');
-	if (actualkey=="a")
-		movePlayer('2');
-	if (actualkey=="d")
-		movePlayer('3');
-  };
-  
-  function movePlayer(d){
-  	if (d == '0'){
-  		socket.emit('movePlayer',{dy: 0.3, dx: 0.0, uid: selfuid });
-	}	
-  	if (d == '1'){
-  		socket.emit('movePlayer',{dy: -0.3, dx: 0.0, uid: selfuid});
-	}
-  	if (d == '2'){
-  		socket.emit('movePlayer',{dy: 0.0, dx: -0.3, uid: selfuid});
-	}
-  	if (d == '3'){
-  		socket.emit('movePlayer',{dy: 0.0, dx: 0.3, uid: selfuid});
-	}  
-  };
-document.onkeypress=keyEvent;
+//  function keyEvent(e){
+//	var evtobj=window.event? event : e //distinguish between IE's explicit event object (window.event) and Firefox's implicit.
+//	var unicode=evtobj.charCode? evtobj.charCode : evtobj.keyCode
+//	var actualkey=String.fromCharCode(unicode)
+//	if (actualkey=="w")
+//		movePlayer('0');
+//	if (actualkey=="s")
+//		movePlayer('1');
+//	if (actualkey=="a")
+//		movePlayer('2');
+//	if (actualkey=="d")
+//		movePlayer('3');
+//  };
+//  
+//  function movePlayer(d){
+//  	if (d == '0'){
+//  		socket.emit('movePlayer',{dy: 0.3, dx: 0.0, uid: selfuid });
+//	}	
+//  	if (d == '1'){
+//  		socket.emit('movePlayer',{dy: -0.3, dx: 0.0, uid: selfuid});
+//	}
+//  	if (d == '2'){
+//  		socket.emit('movePlayer',{dy: 0.0, dx: -0.3, uid: selfuid});
+//	}
+//  	if (d == '3'){
+//  		socket.emit('movePlayer',{dy: 0.0, dx: 0.3, uid: selfuid});
+//	}  
+//  };
+//document.onkeypress=keyEvent;
 
 // Find entitiy by uid
 function entityByUid(uid) {

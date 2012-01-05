@@ -10,6 +10,7 @@ a {
 div#charselect {
 	float: left;
 	width: 250px;
+	position: absolute;
 }
 
 div#gameframe {
