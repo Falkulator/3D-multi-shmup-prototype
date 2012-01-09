@@ -1,4 +1,5 @@
 Player = require('./public/javascripts/player.js')
+
 var players = [];
 var entities = [];
 
@@ -15,7 +16,7 @@ module.exports.gamestart = function(io) {
 // Game Loop
 
 function update(io){
-	
+	updateEntities(io);
 	updatePlayers(io);
 
 };
@@ -37,8 +38,11 @@ function initSockets(io){
 
 io.sockets.on('connection', function (socket) {
    socket.on('movePlayer', movePlayer);
+   socket.on('rotPlayer', rotPlayer);
+   socket.on('fire', trytofire);
    socket.on('disconnect', onDisconnect);
    socket.on('onNewPlayer', onNewPlayer);
+
 });
 };
 
@@ -47,8 +51,6 @@ io.sockets.on('connection', function (socket) {
   	console.log(data.player.user + " Has Entered");
   	var newplayer = new Player(data.player.user, 0, 0);
   	newplayer.id = this.id;
-	newplayer.x = 1;
-	newplayer.y = 2;
 	newplayer.type = 'player';
   	this.broadcast.emit('newplayer', {id: newplayer.id, user: newplayer.user});
   	var i, existingPlayer;
@@ -73,15 +75,18 @@ function onDisconnect(){
 		console.log("Player not found: " + this.id);
 		return;
 	};
-	// Remove player from players array
+	// Remove from players array
 	players.splice(players.indexOf(removePlayer), 1);
 	// Remove Player entity
-	entities.splice(players.indexOf(removePlayer), 1);
+    entities.splice(entities.indexOf(removePlayer), 1);
+
 	// Broadcast removed player to connected socket clients
-	this.broadcast.emit("removeplayer", {id: this.id, uid: this.uid()});
+	this.broadcast.emit("removeplayer", {id: this.id});
 
 };
-
+function removeEntity(i){
+  entities.splice(i, 1);
+};
 function movePlayer(d){
   var player = entityById(d.uid);
   player.x += d.dx;
@@ -89,18 +94,45 @@ function movePlayer(d){
 
 
 };
+function rotPlayer(d){
+  var player = entityById(d.uid);
+  player.rot = d.rot;
+};
+function trytofire(d){
+  var player = entityById(d.uid);
+  if (!player){return};
+  
+  var bullet = player.fire(player.x,player.y,d.aim[0],d.aim[1]);
+  entities.push(bullet);
+  
+  
+};
 
 
 function initEntities() {
 
 };
 
+//executes updateEnt on each entity
+function updateEntities(io){
+var i, entity;
+	for (i = 0; i < entities.length; i++) {
+		
+		entities[i].updateEnt();
+		if(entities[i].remove){
+		  io.sockets.emit("removeEnt", {uid: entities[i].uid});	
+		  removeEntity(i);
+ 
+		};
+		
+	};
+};
 // Broadcast entity information to clients, uid = unique ent id, id = socket id
 function updatePlayers(io) {
 var i, entity;
 	for (i = 0; i < entities.length; i++) {
 		entity = entities[i];
-		io.sockets.emit("entityUpdate", {id: entity.id, user: entity.user, x: entity.getX(), y: entity.getY(), uid: entity.uid(), type: entity.type });
+		io.sockets.emit("entityUpdate", {id: entity.id, user: entity.user, x: entity.getX(), y: entity.getY(), uid: entity.uid(), type: entity.type, rot: entity.getRot() });
 	};
 };
 
