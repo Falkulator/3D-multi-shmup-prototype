@@ -83,7 +83,15 @@
 				entities[i].entobj.setLocX(entities[i].x);
 				entities[i].entobj.setLocY(entities[i].y);
 				entities[i].entobj.setRotZ(entities[i].rot);
+				if(entities[i].uid == selfuid){
+					$('#selfinfo').text("HP : " + entities[i].hp);
+					if(entities[i].hp <=0){
+						askrespawn();
+					}
+				}
+				
 			}
+
 		}
 	
 			
@@ -144,9 +152,26 @@
 	}
   }
   function removeEntity(entity){
+	if(entity.uid == selfuid){askrespawn();};
 	gameScene.removeChild(entity.entobj);
     entities.splice(entities.indexOf(entity), 1);
 	
+  }
+  function askrespawn(){
+	$('#selfinfo').text("DEAD");
+	var b = document.createElement('input');
+    b.value = 'Respawn';
+	b.type = 'button';
+	b.id = 'res';
+	b.onclick = function(){
+	  socket.emit('respawn', {user: selfname});
+	  $('#res').remove();
+	}
+	document.appendChild(b);
+//    var r = confirm('you dead' + "\n" + 'Would you care to respawn?');
+//	  if (r==true){
+//	    socket.emit('respawn', {user: selfname});
+//	  }
   }
 	
 	//Sockets Start
@@ -178,7 +203,8 @@
 	  
 	ent.x = data.x;
 	ent.y = data.y;
-	ent.rot = data.rot;			
+	ent.rot = data.rot;	
+	ent.hp = data.hp;		
 
 		
   });
@@ -188,7 +214,6 @@
   socket.on('removeEnt', function(data){
     var ent = entityByUid(data.uid);
 	if (!ent){return};
-	console.log(ent);
 	removeEntity(ent);
   });
 
@@ -196,11 +221,12 @@
     socket.emit('onNewPlayer',{player: {user: document.getElementById('nameb').value}});
     var names = document.getElementById('names');
     li = document.createElement('li');
-//	hpp = document.createElement('p');
+	selfinfo = document.createElement('div');
+	selfinfo.id = 'selfinfo';
 	li.id = 'selfname';
     li.innerHTML = document.getElementById('nameb').value;
     document.getElementById('online').appendChild(li);
-//	document.getElementById('selfname').appendChild(p);
+	document.getElementById('online').appendChild(selfinfo);
     document.getElementById('charselect').removeChild(names);
 
     };

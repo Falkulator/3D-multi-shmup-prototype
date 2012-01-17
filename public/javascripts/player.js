@@ -16,6 +16,7 @@ var Player = function(user, x, y){
 	this.dx;
 	this.dy;
 	this.remove = false;
+    this.isdead = false;
  	this.fire = fire;
 	this.updateEnt = updateEnt;
 
@@ -37,6 +38,10 @@ function updateEnt(){
   if (this.ishit){
     this.hp -= 5;
     this.ishit = false;
+  }
+  if (this.hp <= 0){
+    this.isdead = true;
+    this.remove = true;
   }
 };
 

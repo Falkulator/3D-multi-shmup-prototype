@@ -42,6 +42,7 @@ io.sockets.on('connection', function (socket) {
    socket.on('fire', trytofire);
    socket.on('disconnect', onDisconnect);
    socket.on('onNewPlayer', onNewPlayer);
+   socket.on('respawn', respawn);
 
 });
 };
@@ -64,7 +65,13 @@ io.sockets.on('connection', function (socket) {
  	entities.push(newplayer);
   };
 
-
+  function respawn(data){
+	var newplayer = new Player(data.player.user, 0, 0);
+  	newplayer.id = this.id;
+	newplayer.type = 'player';
+	this.emit('selfid', { uid: newplayer.uid() });
+	entities.push(newplayer);
+  };
 
 
 function onDisconnect(){
@@ -141,6 +148,9 @@ var i, entity;
 		
 		entities[i].updateEnt();
 
+		if(entities[i].isdead){
+		  
+		};
 		if(entities[i].remove){
 		  io.sockets.emit("removeEnt", {uid: entities[i].uid()});
 		  removeEntity(i);
@@ -150,7 +160,6 @@ var i, entity;
 		  if (intersectRect(entities[i],entities[j]) && entities[i].id!==entities[j].id && entities[i].type!==entities[j].type){
 			entities[i].ishit = true;
 			entities[j].ishit = true;
-		    console.log(entities[i].uid() + ' hit ' + entities[j].uid());
 
 		  };
 
