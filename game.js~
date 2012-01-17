@@ -112,19 +112,51 @@ function trytofire(d){
 function initEntities() {
 
 };
+//collision detection
+function intersectRect(A, B){
+  var xOverlap = valueInRange(A.x, B.x, B.x + B.rad) ||
+  valueInRange(B.x, A.x, A.x + A.rad) ||
+  valueInRange(A.x, B.x - B.rad, B.x) ||
+  valueInRange(B.x, A.x - A.rad, A.x);
+
+  var yOverlap = valueInRange(A.y, B.y, B.y + B.rad) ||
+  valueInRange(B.y, A.y, A.y + A.rad) ||
+  valueInRange(A.y, B.y - B.rad, B.y) ||
+  valueInRange(B.y, A.y - A.rad, A.y);
+
+  return xOverlap && yOverlap;
+};
+function valueInRange(value, min, max){
+
+  return (value <= max) && (value >= min);
+
+};
+
 
 //executes updateEnt on each entity
 function updateEntities(io){
 var i, entity;
+
 	for (i = 0; i < entities.length; i++) {
 		
 		entities[i].updateEnt();
+
 		if(entities[i].remove){
-		  io.sockets.emit("removeEnt", {uid: entities[i].uid});	
+		  io.sockets.emit("removeEnt", {uid: entities[i].uid()});
 		  removeEntity(i);
- 
+		};	
+
+		for(j=i+1; j< entities.length; j++){
+		  if (intersectRect(entities[i],entities[j]) && entities[i].id!==entities[j].id && entities[i].type!==entities[j].type){
+			entities[i].ishit = true;
+			entities[j].ishit = true;
+		    console.log(entities[i].uid() + ' hit ' + entities[j].uid());
+
+		  };
+
 		};
-		
+
+	
 	};
 };
 // Broadcast entity information to clients, uid = unique ent id, id = socket id
@@ -132,7 +164,7 @@ function updatePlayers(io) {
 var i, entity;
 	for (i = 0; i < entities.length; i++) {
 		entity = entities[i];
-		io.sockets.emit("entityUpdate", {id: entity.id, user: entity.user, x: entity.getX(), y: entity.getY(), uid: entity.uid(), type: entity.type, rot: entity.getRot() });
+		io.sockets.emit("entityUpdate", {id: entity.id, user: entity.user, x: entity.getX(), y: entity.getY(), uid: entity.uid(), type: entity.type, rot: entity.getRot(), hp: entity.hp});
 	};
 };
 

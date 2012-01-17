@@ -5,10 +5,18 @@ var Player = function(user, x, y){
 	this.user = user;
 	this.id;
 	this.type;
-	this.rot;
+	this.hp = 100;
+	this.rot = 0;
+	this.rad = 0.4;
+	this.top;
+	this.bottom;
+	this.right;
+	this.left;
 	this.dx;
 	this.dy;
+	this.remove = false;
  	this.fire = fire;
+	this.updateEnt = updateEnt;
 
 }
 	Player.prototype.getX = function() {
@@ -20,13 +28,17 @@ var Player = function(user, x, y){
 	Player.prototype.getRot = function() {
 		return this.rot;
 	};
-	Player.prototype.updateEnt = function() {
-
-	};
+function updateEnt(){
+  this.top = this.y+this.rad;
+  this.bottom = this.y-this.rad;
+  this.right = this.x+this.rad;
+  this.left = this.x-this.rad;
+};
 
 
 function fire(x,y,ax,ay){
   var bullet = new Bullet(x,y,ax,ay);
+  bullet.id = this.id;
   return bullet;	
 }
 //unique id generator for the ents
@@ -47,8 +59,11 @@ function fire(x,y,ax,ay){
 Bullet.prototype = new Player();
 Bullet.prototype.constructor = Bullet;
 function Bullet(x,y,dx,dy){
+	this.type = 'bullet';
 	this.x	= x;
 	this.y = y;
+	this.rot = 0;
+	this.rad = 0.1;
 	this.startx = x;
 	this.starty = y;
 	var vlength = veclength(dx,dy);
@@ -57,12 +72,15 @@ function Bullet(x,y,dx,dy){
 	this.updateEnt = updateBullet;
 };
 function updateBullet(){
+  this.top = this.y+this.rad;
+  this.bottom = this.y-this.rad;
+  this.right = this.x+this.rad;
+  this.left = this.x-this.rad;
 	this.x += this.ax;
 	this.y += this.ay;
 	if(veclength(this.x-this.startx, this.y-this.starty)>100){
-        return false;
+        this.remove = true;
 	}
-	
 }
 
 function veclength(x,y){

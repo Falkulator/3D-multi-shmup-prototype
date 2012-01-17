@@ -7,7 +7,7 @@
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script> 
 <link type="text/css" rel="stylesheet" href="/stylesheets/style.css"></link>
 </head>
-<body>
+<body oncontextmenu="return false;">
 	<div id="charselect" >
 		<div id="names">
 		 Identify: <input type="text" name="fname" id="nameb" /><br />
@@ -65,7 +65,7 @@
 	
 		}	
 
-		setInterval(render,33);
+		setInterval(render,20);
 
 		function updatecamera(){
 			var w;
@@ -110,25 +110,39 @@
 	if(keys.isKeyPressed(GLGE.KI_A)) {socket.emit('movePlayer',{dy: 0.0, dx: -0.1, uid: selfuid });}
 	if(keys.isKeyPressed(GLGE.KI_D)) {socket.emit('movePlayer',{dy: 0.0, dx: 0.1, uid: selfuid });}
   }
-	
+  document.onselectstart = function(){ return false; }
   document.getElementById("canvas1").onmouseover=function(e){mouseovercanvas=true;}
   document.getElementById("canvas1").onmouseout=function(e){mouseovercanvas=false;}
   document.onmousedown=function(e){
     var mousepos=mouse.getMousePosition();
-    if(mousepos.x && mousepos.y){
+    if(e.button==0 && mousepos.x && mousepos.y){
 	  socket.emit('fire', {aim: aimvector, uid: selfuid });
     }
   }
   function addEntity(entity){
 	entity.entobj = new GLGE.Object(entity.uid);
-	entity.entobj.setMesh(doc.getElement('cube'));
-	entity.entobj.setMaterial(doc.getElement('cubeMat'));
-	entity.entobj.setScale(0.4);
-	entity.entobj.setLocZ(-10);
+	initEntity(entity, entity.type);
 	gameScene.addObject(entity.entobj);
 	entities.push(entity);
+
   }
   
+  function initEntity(entity, type){
+    if(type == 'player'){
+	  entity.entobj.setMesh(doc.getElement('cube'));
+	  entity.entobj.setMaterial(doc.getElement('cubeMat'));
+	  entity.entobj.setScale(0.4);
+	  entity.entobj.setLocZ(-10);
+	  entity.entobj.uid = entity.uid;
+	}
+	if(type == 'bullet'){
+	  entity.entobj.setMesh(doc.getElement('sphere'));
+	  entity.entobj.setMaterial(doc.getElement('sphereMat'));
+	  entity.entobj.setScale(0.1);
+	  entity.entobj.setLocZ(-10);
+	  entity.entobj.uid = entity.uid;
+	}
+  }
   function removeEntity(entity){
 	gameScene.removeChild(entity.entobj);
     entities.splice(entities.indexOf(entity), 1);
@@ -165,7 +179,7 @@
 	ent.x = data.x;
 	ent.y = data.y;
 	ent.rot = data.rot;			
-	  
+
 		
   });
   socket.on('selfid', function(data){
@@ -173,6 +187,7 @@
   });
   socket.on('removeEnt', function(data){
     var ent = entityByUid(data.uid);
+	if (!ent){return};
 	removeEntity(ent);
   });
 
@@ -180,9 +195,13 @@
     socket.emit('onNewPlayer',{player: {user: document.getElementById('nameb').value}});
     var names = document.getElementById('names');
     li = document.createElement('li');
+//	hpp = document.createElement('p');
+	li.id = 'selfname';
     li.innerHTML = document.getElementById('nameb').value;
     document.getElementById('online').appendChild(li);
+//	document.getElementById('selfname').appendChild(p);
     document.getElementById('charselect').removeChild(names);
+
     };
     
 
