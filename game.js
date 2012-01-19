@@ -2,7 +2,6 @@ Player = require('./public/javascripts/player.js')
 
 var players = [];
 var entities = [];
-
 module.exports.gamestart = function(io) {
 	initSockets(io);
 	initEntities();
@@ -17,7 +16,7 @@ module.exports.gamestart = function(io) {
 
 function update(io){
 	updateEntities(io);
-	updatePlayers(io);
+
 
 };
 	
@@ -26,7 +25,7 @@ function start(io){
 		setTimeout( function(){
 		start(io);
 		update(io);
-		}, 25);
+		}, 5);
 	}
 	catch(err){
 	}
@@ -75,8 +74,10 @@ io.sockets.on('connection', function (socket) {
 
 
 function onDisconnect(){
-	console.log(this.user + " has left");
+
 	var removePlayer = playerById(this.id);
+	var removeEnt = entityById(removePlayer.uid());
+	console.log(removePlayer.user + " has left");
 	// Player not found
 	if (!removePlayer) {
 		console.log("Player not found: " + this.id);
@@ -85,8 +86,7 @@ function onDisconnect(){
 	// Remove from players array
 	players.splice(players.indexOf(removePlayer), 1);
 	// Remove Player entity
-    entities.splice(entities.indexOf(removePlayer), 1);
-
+	removeEnt.remove = true;
 	// Broadcast removed player to connected socket clients
 	this.broadcast.emit("removeplayer", {id: this.id});
 
@@ -142,8 +142,8 @@ function valueInRange(value, min, max){
 
 //executes updateEnt on each entity
 function updateEntities(io){
-var i, entity;
-
+var i;
+var jents = [];
 	for (i = 0; i < entities.length; i++) {
 		
 		entities[i].updateEnt();
@@ -151,10 +151,7 @@ var i, entity;
 		if(entities[i].isdead){
 		  
 		};
-		if(entities[i].remove){
-		  io.sockets.emit("removeEnt", {uid: entities[i].uid()});
-		  removeEntity(i);
-		};	
+
 
 		for(j=i+1; j< entities.length; j++){
 		  if (intersectRect(entities[i],entities[j]) && entities[i].id!==entities[j].id && entities[i].type!==entities[j].type){
@@ -164,18 +161,28 @@ var i, entity;
 		  };
 
 		};
-
-	
+		if(!entities[i].remove){
+		jents[i] = {};
+		jents[i].x = entities[i].getX();
+		jents[i].y = entities[i].getY();
+		jents[i].uid = entities[i].uid();
+		jents[i].rot = entities[i].getRot();
+		jents[i].hp = entities[i].hp;
+		jents[i].type = entities[i].type;
+		jents[i].id = entities[i].id;
+		};
+		if(entities[i].remove){
+		  io.sockets.emit("removeEnt", {uid: entities[i].uid()});
+		  removeEntity(i);
+		};	
 	};
-};
 // Broadcast entity information to clients, uid = unique ent id, id = socket id
-function updatePlayers(io) {
-var i, entity;
-	for (i = 0; i < entities.length; i++) {
-		entity = entities[i];
-		io.sockets.emit("entityUpdate", {id: entity.id, user: entity.user, x: entity.getX(), y: entity.getY(), uid: entity.uid(), type: entity.type, rot: entity.getRot(), hp: entity.hp});
-	};
+	var jstring = JSON.stringify(jents);
+	var jparse = JSON.parse(jstring);
+	io.sockets.emit("entityUpdate", {"entarr": jparse});
+
 };
+
 
 
 

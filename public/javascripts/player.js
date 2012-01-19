@@ -87,8 +87,8 @@ function updateBullet(){
   this.bottom = this.y-this.rad;
   this.right = this.x+this.rad;
   this.left = this.x-this.rad;
-	this.x += this.ax;
-	this.y += this.ay;
+	this.x += this.ax/4;
+	this.y += this.ay/4;
 	if(veclength(this.x-this.startx, this.y-this.starty)>100){
         this.remove = true;
 	}

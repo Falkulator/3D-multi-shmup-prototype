@@ -125,7 +125,7 @@
 	<camera id="mainCamera" />
 
 	<object id="player" mesh="#cube" material="#cubeMat" frame_rate="60"  loc_z="-10"  />
-	
+	<object id="bullet" mesh="#sphere" material="#shereMat" frame_rate="60"  loc_z="-10"  />
 	<scene id="mainscene" camera="#mainCamera" ambient_color="#fff">
 		
 		<light id="mainlight" loc_x="10" loc_y="15" loc_z="10" rot_x="-1.3" color="#fff" type="L_POINT" />

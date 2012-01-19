@@ -20,6 +20,7 @@
 		</div>
 	</div>
 	<div id="gameframe">
+		<div id="lat"></div>
 		<canvas id="canvas1"></canvas>
 	</div>
 	
@@ -31,6 +32,7 @@
   var entity;
   var selfuid;
   var selfname;
+  var lag = Date.now();
   var mouseovercanvas;
   var aimvector = GLGE.Vec3(0,0,0);
   var upvector = GLGE.Vec3(0,-1,0);
@@ -65,7 +67,7 @@
 	
 		}	
 
-		setInterval(render,20);
+		setInterval(render,10);
 
 		function updatecamera(){
 			var w;
@@ -76,20 +78,23 @@
 			gameScene.camera.setAspect(w/h);
 			gameScene.camera.setLocX(me.x);
 			gameScene.camera.setLocY(me.y);
+			gameScene.camera.setLocZ(35);
+			// grabs self hp
+			if(me.hp <=0){
+				askrespawn();
+			}			
+			if(me.hp >0){
+				$('#selfinfo').text("HP : " + me.hp);
+			}
+
 		}
 		function updateEntities(){
 			var i;
+				//console.log(entities.length);
 			for (i = 0; i < entities.length; i++) {
 				entities[i].entobj.setLocX(entities[i].x);
 				entities[i].entobj.setLocY(entities[i].y);
 				entities[i].entobj.setRotZ(entities[i].rot);
-				if(entities[i].uid == selfuid){
-					$('#selfinfo').text("HP : " + entities[i].hp);
-					if(entities[i].hp <=0){
-						askrespawn();
-					}
-				}
-				
 			}
 
 		}
@@ -167,11 +172,8 @@
 	  socket.emit('respawn', {user: selfname});
 	  $('#res').remove();
 	}
-	document.appendChild(b);
-//    var r = confirm('you dead' + "\n" + 'Would you care to respawn?');
-//	  if (r==true){
-//	    socket.emit('respawn', {user: selfname});
-//	  }
+	document.getElementById('online').appendChild(b);
+
   }
 	
 	//Sockets Start
@@ -191,22 +193,30 @@
   socket.on('removeplayer', function(data){
   	li = document.getElementById(data.id);
   	document.getElementById('online').removeChild(li);
-  	var ent = entityById(data.id);
-  	removeEntity(ent);	
+//  	var ent = entityByUid(data.uid);
+//	if(!ent){return};
+//  	removeEntity(ent);	
+	console.log(ent +  ' ' + data.id);
   });
   socket.on('entityUpdate', function(data){
-  	
-    var ent = entityByUid(data.uid);
-      if (!ent){
-    	addEntity(data);
-      }
-	  
-	ent.x = data.x;
-	ent.y = data.y;
-	ent.rot = data.rot;	
-	ent.hp = data.hp;		
+  	var lat = Date.now() - lag;
+//	console.log('Latency ' + lat);
+	
+var i;
+for (i=0; i<data.entarr.length; i++){
+if(data.entarr[i] == null){return};
+   var ent = entityByUid(data.entarr[i].uid);
 
-		
+      if (!ent){
+    	addEntity(data.entarr[i]);
+      }
+	ent.x = data.entarr[i].x;
+	ent.y = data.entarr[i].y;
+	ent.rot = data.entarr[i].rot;	
+	ent.hp = data.entarr[i].hp;
+};
+
+	lag = Date.now();	
   });
   socket.on('selfid', function(data){
 	selfuid = data.uid;

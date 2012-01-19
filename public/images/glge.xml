@@ -102,6 +102,7 @@
 	</mesh>
 
 	<material id="cubeMat" specular="1" color="#0088bb" />
+	<material id="cubehitMat" specular="1" color="#ff3333" />
 	<material id="sphereMat" specular="0.5" color="#cc0000" />
 
 	<animation_vector id="spin" frames="240">
