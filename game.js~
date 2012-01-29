@@ -137,7 +137,8 @@ function addEntity(entity){
 	ent.r = entity.getRot().toFixed(2);
 	ent.h = entity.hp;
 	ent.t = entity.type;
-	return ent;
+  var bcode = bison.encode(ent);
+	return bcode;
 };
 
 function initEntities() {

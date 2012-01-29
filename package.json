@@ -1,5 +1,5 @@
 {
-    "name": "application-name"
+    "name": "webglgame"
   , "version": "0.0.1"
   , "private": true
   , "dependencies": {

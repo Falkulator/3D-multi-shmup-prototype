@@ -1,8 +1,5 @@
 Player = require('./public/javascripts/player.js')
 bison = require('bison')
-snappy = require('snappy')
-zlib = require('zlib')
-compress = require('node-compress')
 var players = [];
 var entities = [];
 module.exports.gamestart = function(io) {
