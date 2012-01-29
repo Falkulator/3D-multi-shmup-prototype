@@ -7,7 +7,6 @@ var express = require('express')
   , routes = require('./routes')
   , Player = require('./public/javascripts/player.js')
   , game = require('./game')
-
 var app = module.exports = express.createServer()
   , io = require('socket.io').listen(app);
 // Configuration
@@ -22,7 +21,7 @@ app.configure(function(){
 });
 
 app.configure('development', function(){
-  app.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
+  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 });
 
 app.configure('production', function(){
@@ -37,10 +36,10 @@ io.configure(function() {
 });
 
 // Routes
-
 app.get('/', function (req, res) {
   res.sendfile(__dirname + '/index.html');
   });
+
 
 app.listen(3000);
 console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);

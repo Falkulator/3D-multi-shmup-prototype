@@ -15,8 +15,11 @@ div#charselect {
 	float: left;
 	width: 250px;
 	position: absolute;
+	top: 10px;
 }
-
+div#lat {
+	position: absolute;
+}
 div#gameframe {
 	float: right;
 }

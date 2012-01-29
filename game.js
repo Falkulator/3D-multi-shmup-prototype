@@ -1,5 +1,8 @@
 Player = require('./public/javascripts/player.js')
-
+bison = require('bison')
+snappy = require('snappy')
+zlib = require('zlib')
+compress = require('node-compress')
 var players = [];
 var entities = [];
 module.exports.gamestart = function(io) {
@@ -8,7 +11,7 @@ module.exports.gamestart = function(io) {
 	start(io);
 
 
-	};
+};
 
 
 	
@@ -16,8 +19,6 @@ module.exports.gamestart = function(io) {
 
 function update(io){
 	updateEntities(io);
-
-
 };
 	
 function start(io){
@@ -25,7 +26,7 @@ function start(io){
 		setTimeout( function(){
 		start(io);
 		update(io);
-		}, 5);
+		}, 30);
 	}
 	catch(err){
 	}
@@ -42,6 +43,7 @@ io.sockets.on('connection', function (socket) {
    socket.on('disconnect', onDisconnect);
    socket.on('onNewPlayer', onNewPlayer);
    socket.on('respawn', respawn);
+   socket.on('ping', ping);
 
 });
 };
@@ -51,73 +53,108 @@ io.sockets.on('connection', function (socket) {
   	console.log(data.player.user + " Has Entered");
   	var newplayer = new Player(data.player.user, 0, 0);
   	newplayer.id = this.id;
-	newplayer.type = 'player';
+	  newplayer.type = 0;
   	this.broadcast.emit('newplayer', {id: newplayer.id, user: newplayer.user});
   	var i, existingPlayer;
 	
-	for (i = 0; i < players.length; i++) {
-		existingPlayer = players[i];
-		this.emit("newplayer", {id: existingPlayer.id, user: existingPlayer.user});
-	};
-	this.emit('selfid', { uid: newplayer.uid() });
- 	players.push(newplayer);
- 	entities.push(newplayer);
+	  for (i = 0; i < players.length; i++) {
+		  existingPlayer = players[i];
+		  this.emit("newplayer", {id: existingPlayer.id, user: existingPlayer.user});
+	  };
+	  this.emit('selfid', { uid: newplayer.uid() });
+		this.emit('initents', initEntities());
+ 	  players.push(newplayer);
+ 	  entities.push(newplayer);
   };
 
   function respawn(data){
-	var newplayer = new Player(data.user, 0, 0);
-  	newplayer.id = this.id;
-	newplayer.type = 'player';
-	this.emit('selfid', { uid: newplayer.uid() });
-	entities.push(newplayer);
+	  var newent = new Player(data.user, 0, 0);
+  	newent.id = this.id;
+	  newent.type = 0;
+	  var player = playerById(this.id);
+	  players.splice(players.indexOf(player), 1);
+	  this.emit('selfid', { uid: newent.uid() });
+	  entities.push(newent);
+	  players.push(newent);
   };
 
+  function ping(d){
+	  this.emit('pong', {ping: d.ping, pong: 1});
+  };
 
-function onDisconnect(){
+  function onDisconnect(){
+	  var removePlayer = playerById(this.id);
+  	console.log(removePlayer.user + " has left");
+	  // Player not found
+	  if (!removePlayer) {
+		  console.log("Player not found: " + this.id);
+	  	return;
+	  };
+  	var removeEnt = entityById(removePlayer.uid());
+    // Remove from players array
+	  players.splice(players.indexOf(removePlayer), 1);
+	  // Remove Player entity
+	  removeEnt.remove = true;
+  	// Broadcast removed player to connected socket clients
+  	this.broadcast.emit("removeplayer", {id: this.id});
+  };
 
-	var removePlayer = playerById(this.id);
-	var removeEnt = entityById(removePlayer.uid());
-	console.log(removePlayer.user + " has left");
-	// Player not found
-	if (!removePlayer) {
-		console.log("Player not found: " + this.id);
-		return;
+  function removeEntity(i){
+    entities.splice(i, 1);
+  };
+
+  function movePlayer(d){
+    var player = entityById(d.uid);
+    if (d.m == 0){
+	    player.y += 0.1;
+ 		}
+ 		if (d.m == 1){
+			player.y += -0.1;
+ 		}
+  	if (d.m == 2){
+			player.x += -0.1;
+  	}
+  	if (d.m == 3){
+			player.x += 0.1;
+  	}
+  };
+  function rotPlayer(d){
+    var player = entityById(d.uid);
+    player.rot = d.rot;
+  };
+  function trytofire(d){
+    var player = entityById(d.uid);
+    if (!player){return};
+    var bullet = player.fire(player.x,player.y,d.aim[0],d.aim[1]);
+    entities.push(bullet); 
 	};
-	// Remove from players array
-	players.splice(players.indexOf(removePlayer), 1);
-	// Remove Player entity
-	removeEnt.remove = true;
-	// Broadcast removed player to connected socket clients
-	this.broadcast.emit("removeplayer", {id: this.id});
 
+function addEntity(entity){
+	var ent = {}
+	ent.u = entity.uid();
+	ent.x = entity.getX().toFixed(2);
+	ent.y = entity.getY().toFixed(2);
+	ent.r = entity.getRot().toFixed(2);
+	ent.h = entity.hp;
+	ent.t = entity.type;
+  var bcode = bison.encode(ent);
+	return bcode;
 };
-function removeEntity(i){
-  entities.splice(i, 1);
-};
-function movePlayer(d){
-  var player = entityById(d.uid);
-  player.x += d.dx;
-  player.y += d.dy;
-
-
-};
-function rotPlayer(d){
-  var player = entityById(d.uid);
-  player.rot = d.rot;
-};
-function trytofire(d){
-  var player = entityById(d.uid);
-  if (!player){return};
-  
-  var bullet = player.fire(player.x,player.y,d.aim[0],d.aim[1]);
-  entities.push(bullet);
-  
-  
-};
-
 
 function initEntities() {
+	var ents = [];
+	for (i = 0; i < entities.length; i++) {
+		ents[i] = {};
+		ents[i].u = entities[i].uid();
+		ents[i].x = entities[i].getX().toFixed(2);
+		ents[i].y = entities[i].getY().toFixed(2);
+		ents[i].r = entities[i].getRot().toFixed(2);
+		ents[i].h = entities[i].hp;
+		ents[i].t = entities[i].type;
 
+	}
+  var bcode = bison.encode(ents);
+	return bcode;
 };
 //collision detection
 function intersectRect(A, B){
@@ -147,43 +184,55 @@ var jents = [];
 	for (i = 0; i < entities.length; i++) {
 		
 		entities[i].updateEnt();
-
+		if(entities[i].add){
+			io.sockets.emit("2", addEntity(entities[i]));
+			entities[i].add = false;
+		}
 		if(entities[i].isdead){
 		  
 		};
-
+		if(entities[i].remove){
+		  io.sockets.emit("removeEnt", {uid: entities[i].uid()});
+		  removeEntity(i);
+			return;
+		};	
 
 		for(j=i+1; j< entities.length; j++){
 		  if (intersectRect(entities[i],entities[j]) && entities[i].id!==entities[j].id && entities[i].type!==entities[j].type){
-			entities[i].ishit = true;
-			entities[j].ishit = true;
+			  entities[i].ishit = true;
+			  entities[j].ishit = true;
 
 		  };
 
 		};
 		if(!entities[i].remove){
-		jents[i] = {};
-		jents[i].x = entities[i].getX();
-		jents[i].y = entities[i].getY();
-		jents[i].uid = entities[i].uid();
-		jents[i].rot = entities[i].getRot();
-		jents[i].hp = entities[i].hp;
-		jents[i].type = entities[i].type;
-		jents[i].id = entities[i].id;
+		  jents[i] = {};
+		  jents[i].u = entities[i].uid();
+//Save bandwidth
+			if (entities[i].getX().toFixed(2) !== entities[i].lastx){
+		  	jents[i].x = entities[i].getX().toFixed(2);
+				entities[i].lastx = entities[i].getX().toFixed(2); 
+			}
+			if (entities[i].getY().toFixed(2) !== entities[i].lasty){
+	  		jents[i].y = entities[i].getY().toFixed(2);
+				entities[i].lasty = entities[i].getY().toFixed(2); 
+			}
+			if (entities[i].getRot().toFixed(2) !== entities[i].lastrot){
+		  	jents[i].r = entities[i].getRot().toFixed(2);
+				entities[i].lastrot = entities[i].getRot().toFixed(2); 
+			}
+			if (entities[i].hp !== entities[i].lasthp){
+		  	jents[i].h = entities[i].hp;
+				entities[i].lasthp = entities[i].hp; 
+			}
 		};
-		if(entities[i].remove){
-		  io.sockets.emit("removeEnt", {uid: entities[i].uid()});
-		  removeEntity(i);
-		};	
+
 	};
 // Broadcast entity information to clients, uid = unique ent id, id = socket id
-	var jstring = JSON.stringify(jents);
-	var jparse = JSON.parse(jstring);
-	io.sockets.emit("entityUpdate", {"entarr": jparse});
+  var bcode = bison.encode(jents);
+	io.sockets.volatile.emit("1", bcode);
 
 };
-
-
 
 
 function entityById(uid) {
@@ -205,6 +254,5 @@ function playerById(id) {
 	
 	return false;
 };
-
 
 

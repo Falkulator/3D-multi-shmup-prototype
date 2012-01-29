@@ -7,7 +7,6 @@ var express = require('express')
   , routes = require('./routes')
   , Player = require('./public/javascripts/player.js')
   , game = require('./game')
-
 var app = module.exports = express.createServer()
   , io = require('socket.io').listen(app);
 // Configuration
@@ -22,7 +21,7 @@ app.configure(function(){
 });
 
 app.configure('development', function(){
-  app.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
+  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 });
 
 app.configure('production', function(){
@@ -34,13 +33,22 @@ io.configure(function() {
 		io.set("transports", ["websocket"]);
 		 //Restrict log output
 		io.set("log level", 2);
+		io.enable("browser client gzip")
+
 });
 
 // Routes
-
 app.get('/', function (req, res) {
-  res.sendfile(__dirname + 'index.html');
+//  res.setHeader("Content-Encoding", "gzip");
+  res.sendfile(__dirname + '/index.html');
+//	res.send(raw);
+//	raw.pipe(zlib.createGzip()).pipe(res);
   });
+app.get('/info', function (req, res) {
+//  res.header("Content-Encoding", "gzip");
+  var info = game.entstate();
+  res.send(info);
+});
 
 app.listen(3000);
 console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);

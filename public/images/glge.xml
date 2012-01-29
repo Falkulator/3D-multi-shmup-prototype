@@ -104,7 +104,10 @@
 	<material id="cubeMat" specular="1" color="#0088bb" />
 	<material id="cubehitMat" specular="1" color="#ff3333" />
 	<material id="sphereMat" specular="0.5" color="#cc0000" />
-
+	<material id="bb1Mat" specular="0.5" color="#00cc33" />
+	<material id="bb2Mat" specular="0.5" color="#ff9900" />
+	<material id="bb3Mat" specular="0.5" color="#9933ff" />
+	<material id="bb4Mat" specular="0.5" color="#ffff00" />
 	<animation_vector id="spin" frames="240">
 		<animation_curve channel="RotY">
 			<linear_point x="0" y="0" />
@@ -127,9 +130,12 @@
 
 	<object id="player" mesh="#cube" material="#cubeMat" frame_rate="60"  loc_z="-10"  />
 	<object id="bullet" mesh="#sphere" material="#shereMat" frame_rate="60"  loc_z="-10"  />
-	<scene id="mainscene" camera="#mainCamera" ambient_color="#fff">
-		
+	<scene id="mainscene" camera="#mainCamera" ambient_color="#fff">		
 		<light id="mainlight" loc_x="10" loc_y="15" loc_z="10" rot_x="-1.3" color="#fff" type="L_POINT" />
+		<object id="bb1" mesh="#sphere" material="#bb1Mat" loc_y="-20" loc_x="-20"  scale="5" loc_z="-30"/>
+		<object id="bb2" mesh="#sphere" material="#bb2Mat" loc_y="-20" loc_x="20"  scale="5" loc_z="-30"/>	
+		<object id="bb3" mesh="#sphere" material="#bb3Mat" loc_y="20" loc_x="20" scale="5"  loc_z="-30"/>
+		<object id="bb4" mesh="#sphere" material="#bb4Mat" loc_y="20" loc_x="-20" scale="5"  loc_z="-30" />
 	</scene>
 
 </glge>

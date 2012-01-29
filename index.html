@@ -1,8 +1,10 @@
 
 <html>
 <head>
+<title> multi-shmup prototype</title>
 <script type="text/javascript" src='/socket.io/socket.io.js'></script>
 <script type="text/javascript" src='/javascripts/player.js'></script>
+<script type="text/javascript" src='/javascripts/bison.js'></script>
 <script type="text/javascript" src="/javascripts/glge-compiled-min.js"></script> 
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script> 
 <link type="text/css" rel="stylesheet" href="/stylesheets/style.css"></link>
@@ -19,8 +21,8 @@
 		 </ul>
 		</div>
 	</div>
+	<div id="lat"></div>
 	<div id="gameframe">
-		<div id="lat"></div>
 		<canvas id="canvas1"></canvas>
 	</div>
 	
@@ -32,11 +34,11 @@
   var entity;
   var selfuid;
   var selfname;
-  var lag = Date.now();
+  var imin = false;
+  var latency;
   var mouseovercanvas;
   var aimvector = GLGE.Vec3(0,0,0);
   var upvector = GLGE.Vec3(0,-1,0);
-
   
   //webgl start
   var canvas = document.getElementById('canvas1');  
@@ -51,9 +53,9 @@
 
 	//create the renderer
 		
-		gameScene=new GLGE.Scene();
-		gameScene=doc.getElement("mainscene");
-		gameRenderer.setScene(gameScene);
+	  gameScene=new GLGE.Scene();
+	  gameScene=doc.getElement("mainscene");
+	  gameRenderer.setScene(gameScene);
 		
 
 		function render(){
@@ -63,7 +65,7 @@
 			checkkeys();
 			mouselook();
 			gameRenderer.render();
-			
+			ping();
 	
 		}	
 
@@ -86,7 +88,7 @@
 			if(me.hp >0){
 				$('#selfinfo').text("HP : " + me.hp);
 			}
-
+      document.getElementById('lat').innerHTML = 'Ping '+latency;
 		}
 		function updateEntities(){
 			var i;
@@ -98,30 +100,32 @@
 			}
 
 		}
-	
+		function ping(){
+			var now = Date.now();
+			socket.emit('ping', {ping: now});
+		}
 			
 	}
 
 // Controls
   function mouselook(){
-	if(mouseovercanvas){
+	  if(mouseovercanvas){
       var mousepos=mouse.getMousePosition();
-	  var mousevector = new GLGE.Vec3(mousepos.x, mousepos.y, 0);
+	    var mousevector = new GLGE.Vec3(mousepos.x, mousepos.y, 0);
       var midvector = new GLGE.Vec3(window.innerWidth/2, window.innerHeight/2, 0);
       var preaimvector = GLGE.subVec3(mousevector,midvector);
       aimvector[0] = preaimvector[0];
       aimvector[1] = -preaimvector[1];
       var rotangle = Math.atan2(aimvector[1], aimvector[0]);
-	  socket.emit('rotPlayer', {rot: rotangle, uid: selfuid});
-
+	    socket.emit('rotPlayer', {rot: rotangle, uid: selfuid});
     }
   }
   function checkkeys(){
-	if(keys.isKeyPressed(GLGE.KI_M)) {}
-	if(keys.isKeyPressed(GLGE.KI_W)) {socket.emit('movePlayer',{dy: 0.1, dx: 0.0, uid: selfuid });}
-	if(keys.isKeyPressed(GLGE.KI_S)) {socket.emit('movePlayer',{dy: -0.1, dx: 0.0, uid: selfuid });}
-	if(keys.isKeyPressed(GLGE.KI_A)) {socket.emit('movePlayer',{dy: 0.0, dx: -0.1, uid: selfuid });}
-	if(keys.isKeyPressed(GLGE.KI_D)) {socket.emit('movePlayer',{dy: 0.0, dx: 0.1, uid: selfuid });}
+	  if(keys.isKeyPressed(GLGE.KI_M)) {}
+	  if(keys.isKeyPressed(GLGE.KI_W)) {socket.emit('movePlayer',{m:0, uid: selfuid });}
+	  if(keys.isKeyPressed(GLGE.KI_S)) {socket.emit('movePlayer',{m:1, uid: selfuid });}
+	  if(keys.isKeyPressed(GLGE.KI_A)) {socket.emit('movePlayer',{m:2, uid: selfuid });}
+	  if(keys.isKeyPressed(GLGE.KI_D)) {socket.emit('movePlayer',{m:3, uid: selfuid });}
   }
   document.onselectstart = function(){ return false; }
   document.getElementById("canvas1").onmouseover=function(e){mouseovercanvas=true;}
@@ -129,50 +133,55 @@
   document.onmousedown=function(e){
     var mousepos=mouse.getMousePosition();
     if(e.button==0 && mousepos.x && mousepos.y){
-	  socket.emit('fire', {aim: aimvector, uid: selfuid });
+	    socket.emit('fire', {aim: aimvector, uid: selfuid });
     }
   }
   function addEntity(entity){
-	entity.entobj = new GLGE.Object(entity.uid);
-	initEntity(entity, entity.type);
-	gameScene.addObject(entity.entobj);
-	entities.push(entity);
-
+	  var ent = {};
+	  ent.entobj = new GLGE.Object(entity.u);
+	  ent.x = entity.x;
+	  ent.y = entity.y;
+	  ent.rot = entity.r;
+	  ent.hp = entity.h;
+	  ent.uid = entity.u;
+	  initEntity(ent, entity.t);
+	  gameScene.addObject(ent.entobj);
+	  entities.push(ent);
   }
   
   function initEntity(entity, type){
-    if(type == 'player'){
-	  entity.entobj.setMesh(doc.getElement('cube'));
-	  entity.entobj.setMaterial(doc.getElement('cubeMat'));
-	  entity.entobj.setScale(0.4);
-	  entity.entobj.setLocZ(-10);
-	  entity.entobj.uid = entity.uid;
-	}
-	if(type == 'bullet'){
-	  entity.entobj.setMesh(doc.getElement('sphere'));
-	  entity.entobj.setMaterial(doc.getElement('sphereMat'));
-	  entity.entobj.setScale(0.1);
-	  entity.entobj.setLocZ(-10);
-	  entity.entobj.uid = entity.uid;
-	}
+    if(type == '0'){
+	    entity.entobj.setMesh(doc.getElement('cube'));
+	    entity.entobj.setMaterial(doc.getElement('cubeMat'));
+	    entity.entobj.setScale(0.4);
+	    entity.entobj.setLocZ(-10);
+	    entity.entobj.uid = entity.uid;
+	  }
+	  if(type == '1'){
+	    entity.entobj.setMesh(doc.getElement('sphere'));
+	    entity.entobj.setMaterial(doc.getElement('sphereMat'));
+	    entity.entobj.setScale(0.1);
+	    entity.entobj.setLocZ(-10);
+		  entity.entobj.uid = entity.uid;
+	  }
   }
   function removeEntity(entity){
-	if(entity.uid == selfuid){askrespawn();};
-	gameScene.removeChild(entity.entobj);
+	  if(entity.uid == selfuid){askrespawn();};
+	  gameScene.removeChild(entity.entobj);
     entities.splice(entities.indexOf(entity), 1);
 	
   }
   function askrespawn(){
-	$('#selfinfo').text("DEAD");
-	var b = document.createElement('input');
+	  $('#selfinfo').text("DEAD");
+	  var b = document.createElement('input');
     b.value = 'Respawn';
-	b.type = 'button';
-	b.id = 'res';
-	b.onclick = function(){
-	  socket.emit('respawn', {user: selfname});
-	  $('#res').remove();
-	}
-	document.getElementById('online').appendChild(b);
+  	b.type = 'button';
+	  b.id = 'res';
+  	b.onclick = function(){
+	    socket.emit('respawn', {user: selfname});
+	    $('#res').remove();
+	  }
+	  document.getElementById('online').appendChild(b);
 
   }
 	
@@ -180,15 +189,17 @@
 	
   var socket = io.connect(serverip, {port: 3000, transports: ["websocket"]});
   
-  socket.on('news', function (data) {
-    console.log(data);
-
+  socket.on('pong', function (data) {
+	  var lat = Date.now()-data.ping;
+    latency = lat;
   });
   socket.on('newplayer', function(data){
-  	li = document.createElement('li');
-  	li.innerHTML =  data.user;
-  	li.setAttribute('id',data.id);
-  	document.getElementById('online').appendChild(li);
+	  if(imin){
+  	  li = document.createElement('li');
+  	  li.innerHTML =  data.user;
+  	  li.setAttribute('id',data.id);
+    	document.getElementById('online').appendChild(li);
+	  };
   });
   socket.on('removeplayer', function(data){
   	li = document.getElementById(data.id);
@@ -198,49 +209,64 @@
 //  	removeEntity(ent);	
 
   });
-  socket.on('entityUpdate', function(data){
-  	var lat = Date.now() - lag;
-//	console.log('Latency ' + lat);
-	
-var i;
-for (i=0; i<data.entarr.length; i++){
-if(data.entarr[i] == null){return};
-   var ent = entityByUid(data.entarr[i].uid);
-
-      if (!ent){
-    	addEntity(data.entarr[i]);
-      }
-	ent.x = data.entarr[i].x;
-	ent.y = data.entarr[i].y;
-	ent.rot = data.entarr[i].rot;	
-	ent.hp = data.entarr[i].hp;
-};
-
-	lag = Date.now();	
+  socket.on('1', function(msg){
+  var data = BISON.decode(msg);
+	var i;
+  	for (i=0; i<data.length; i++){
+	  	if(data[i] == null){return};
+      var ent = entityByUid(data[i].u);
+      if (data[i].x !== undefined){
+	      ent.x = data[i].x;
+			}
+			if (data[i].y !== undefined){
+	      ent.y = data[i].y;
+			}
+			if (data[i].r !== undefined){
+	      ent.rot = data[i].r;
+			}
+			if (data[i].h !== undefined){
+	    ent.hp = data[i].h;
+			}
+			if (data[i].t !== undefined){
+	    	ent.type = data[i].t;
+			}
+    };
   });
   socket.on('selfid', function(data){
-	selfuid = data.uid;
+	  selfuid = data.uid;
   });
+	//Addent call
+	socket.on('2', function(msg){
+		var data = BISON.decode(msg);
+		addEntity(data);
+	});
   socket.on('removeEnt', function(data){
     var ent = entityByUid(data.uid);
-	if (!ent){return};
-	removeEntity(ent);
+	  if (!ent){return};
+	  removeEntity(ent);
+  });
+  socket.on('initents', function(msg){
+		var data = BISON.decode(msg);
+  	for (i=0; i<data.length; i++){
+			addEntity(data[i]);
+		}		
   });
 
   function submit(){
-    socket.emit('onNewPlayer',{player: {user: document.getElementById('nameb').value}});
+	  selfname = document.getElementById('nameb').value;
+    socket.emit('onNewPlayer',{player: {user: selfname}});
     var names = document.getElementById('names');
     li = document.createElement('li');
-	selfinfo = document.createElement('div');
-	selfinfo.id = 'selfinfo';
-	li.id = 'selfname';
+	  selfinfo = document.createElement('div');
+	  selfinfo.id = 'selfinfo';
+	  li.id = 'selfname';
     li.innerHTML = document.getElementById('nameb').value;
     document.getElementById('online').appendChild(li);
-	document.getElementById('online').appendChild(selfinfo);
+	  document.getElementById('online').appendChild(selfinfo);
     document.getElementById('charselect').removeChild(names);
+	  imin = true;
+  };
 
-    };
-    
 
 // Find entitiy by uid
 function entityByUid(uid) {

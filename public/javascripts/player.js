@@ -1,13 +1,18 @@
 
 var Player = function(user, x, y){
 	this.x = x;
+	this.lastx;
 	this.y = y;
+	this.lasty;
 	this.user = user;
 	this.id;
 	this.type;
+	this.add = true;
 	this.hp = 100;
+	this.lasthp;
 	this.ishit = false;
 	this.rot = 0;
+	this.lastrot;
 	this.rad = 0.4;
 	this.top;
 	this.bottom;
@@ -69,7 +74,7 @@ function fire(x,y,ax,ay){
 Bullet.prototype = new Player();
 Bullet.prototype.constructor = Bullet;
 function Bullet(x,y,dx,dy){
-	this.type = 'bullet';
+	this.type = 1;
 	this.x	= x;
 	this.y = y;
 	this.ishit = false;
@@ -87,8 +92,8 @@ function updateBullet(){
   this.bottom = this.y-this.rad;
   this.right = this.x+this.rad;
   this.left = this.x-this.rad;
-	this.x += this.ax/4;
-	this.y += this.ay/4;
+	this.x += this.ax/1.2;
+	this.y += this.ay/1.2;
 	if(veclength(this.x-this.startx, this.y-this.starty)>100){
         this.remove = true;
 	}
