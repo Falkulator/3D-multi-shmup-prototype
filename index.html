@@ -36,9 +36,11 @@
   var selfname;
   var imin = false;
   var latency;
-  var mouseovercanvas;
+//  var mouseovercanvas;
+  var mouseDown;
   var aimvector = GLGE.Vec3(0,0,0);
   var upvector = GLGE.Vec3(0,-1,0);
+  var currentlyPressedKeys = {};
   
   //webgl start
   var canvas = document.getElementById('canvas1');  
@@ -49,8 +51,7 @@
   var keys=new GLGE.KeyInput();
     doc.load("./images/glge.xml");
 
-	doc.onLoad=function(){
-
+	doc.onLoad=function() {
 	//create the renderer
 		
 	  gameScene=new GLGE.Scene();
@@ -58,12 +59,11 @@
 	  gameRenderer.setScene(gameScene);
 		
 
-		function render(){
+		function render() {
 			updateEntities();
 
 			updatecamera();
 			checkkeys();
-			mouselook();
 			gameRenderer.render();
 			ping();
 	
@@ -71,7 +71,7 @@
 
 		setInterval(render,10);
 
-		function updatecamera(){
+		function updatecamera() {
 			var w;
 			var h;
 			var me = entityByUid(selfuid);
@@ -82,25 +82,25 @@
 			gameScene.camera.setLocY(me.y);
 			gameScene.camera.setLocZ(35);
 			// grabs self hp
-			if(me.hp <=0){
+			if(me.hp <= 0) {
 				askrespawn();
 			}			
-			if(me.hp >0){
+			if(me.hp >0) {
 				$('#selfinfo').text("HP : " + me.hp);
 			}
       document.getElementById('lat').innerHTML = 'Ping '+latency;
 		}
-		function updateEntities(){
-			var i;
+		function updateEntities() {
+			var i, len = entities.length;
 				//console.log(entities.length);
-			for (i = 0; i < entities.length; i++) {
+			for (i = 0; i < len; i += 1) {
 				entities[i].entobj.setLocX(entities[i].x);
 				entities[i].entobj.setLocY(entities[i].y);
 				entities[i].entobj.setRotZ(entities[i].rot);
 			}
 
 		}
-		function ping(){
+		function ping() {
 			var now = Date.now();
 			socket.emit('ping', {ping: now});
 		}
@@ -108,33 +108,56 @@
 	}
 
 // Controls
-  function mouselook(){
-	  if(mouseovercanvas){
-      var mousepos=mouse.getMousePosition();
-	    var mousevector = new GLGE.Vec3(mousepos.x, mousepos.y, 0);
+
+  function checkkeys() {
+  	if(currentlyPressedKeys[87]) {socket.emit('movePlayer',{m: 0, uid: selfuid });}
+  	if(currentlyPressedKeys[83]) {socket.emit('movePlayer',{m: 1, uid: selfuid });}
+	if(currentlyPressedKeys[65]) {socket.emit('movePlayer',{m: 2, uid: selfuid });}
+	if(currentlyPressedKeys[68]) {socket.emit('movePlayer',{m: 3, uid: selfuid });}
+  }
+  document.onselectstart = function() { return false; }
+  document.getElementById("canvas1").onmouseover=function(e){mouseovercanvas=true;}
+  document.getElementById("canvas1").onmouseout=function(e){mouseovercanvas=false;}
+  document.onkeydown = handleKeyDown;
+  document.onkeyup = handleKeyUp;
+  document.onmousedown = handleMouseDown;
+  document.onmouseup = handleMouseUp;
+  document.onmousemove = handleMouseMove;
+
+  function handleMouseDown(event) {
+    mouseDown = true;
+	socket.emit('fire', {aim: aimvector, uid: selfuid });
+	console.log(currentlyPressedKeys);
+  }
+
+  function handleMouseUp(event) {
+    mouseDown = false;
+  }
+
+  function handleMouseMove(event) {
+	  var mousevector = new GLGE.Vec3(event.pageX, event.pageY, 0);
       var midvector = new GLGE.Vec3(window.innerWidth/2, window.innerHeight/2, 0);
       var preaimvector = GLGE.subVec3(mousevector,midvector);
       aimvector[0] = preaimvector[0];
       aimvector[1] = -preaimvector[1];
       var rotangle = Math.atan2(aimvector[1], aimvector[0]);
-	    socket.emit('rotPlayer', {rot: rotangle, uid: selfuid});
+	  socket.emit('rotPlayer', {rot: rotangle, uid: selfuid});
+
+  }
+
+
+  function handleKeyDown(event) {
+    currentlyPressedKeys[event.keyCode] = true;
+    if (String.fromCharCode(event.keyCode) == "F") {
+      filter += 1;
+      if (filter == 3) {
+        filter = 0;
+      }
     }
   }
-  function checkkeys(){
-	  if(keys.isKeyPressed(GLGE.KI_M)) {}
-	  if(keys.isKeyPressed(GLGE.KI_W)) {socket.emit('movePlayer',{m:0, uid: selfuid });}
-	  if(keys.isKeyPressed(GLGE.KI_S)) {socket.emit('movePlayer',{m:1, uid: selfuid });}
-	  if(keys.isKeyPressed(GLGE.KI_A)) {socket.emit('movePlayer',{m:2, uid: selfuid });}
-	  if(keys.isKeyPressed(GLGE.KI_D)) {socket.emit('movePlayer',{m:3, uid: selfuid });}
-  }
-  document.onselectstart = function(){ return false; }
-  document.getElementById("canvas1").onmouseover=function(e){mouseovercanvas=true;}
-  document.getElementById("canvas1").onmouseout=function(e){mouseovercanvas=false;}
-  document.onmousedown=function(e){
-    var mousepos=mouse.getMousePosition();
-    if(e.button==0 && mousepos.x && mousepos.y){
-	    socket.emit('fire', {aim: aimvector, uid: selfuid });
-    }
+
+  function handleKeyUp(event) {
+    currentlyPressedKeys[event.keyCode] = false;
   }
   function addEntity(entity){
 	  var ent = {};
@@ -211,8 +234,8 @@
   });
   socket.on('1', function(msg){
   var data = BISON.decode(msg);
-	var i;
-  	for (i=0; i<data.length; i++){
+	var i, len = data.length;
+  	for (i = 0; i < len; i += 1){
 	  	if(data[i] == null){return};
       var ent = entityByUid(data[i].u);
       if (data[i].x !== undefined){
@@ -246,8 +269,9 @@
 	  removeEntity(ent);
   });
   socket.on('initents', function(msg){
-		var data = BISON.decode(msg);
-  	for (i=0; i<data.length; i++){
+	var data = BISON.decode(msg);
+	var i, len = data.length;
+  	for (i = 0; i < len; i += 1){
 			addEntity(data[i]);
 		}		
   });
@@ -267,11 +291,10 @@
 	  imin = true;
   };
 
-
 // Find entitiy by uid
 function entityByUid(uid) {
-	var i;
-	for (i = 0; i < entities.length; i++) {
+	var i, len = entities.length;
+	for (i = 0; i < len; i += 1) {
 		if (entities[i].uid == uid)
 			return entities[i];
 	};
@@ -280,8 +303,8 @@ function entityByUid(uid) {
 };
 // Find entitiy by id
 function entityById(id) {
-	var i;
-	for (i = 0; i < entities.length; i++) {
+	var i, len = entities.length;
+	for (i = 0; i < len; i += 1) {
 		if (entities[i].id == id)
 			return entities[i];
 	};
@@ -292,8 +315,8 @@ function entityById(id) {
 
 // Find player by ID
 function playerById(id) {
-	var i;
-	for (i = 0; i < players.length; i++) {
+	var i, len = players.length;
+	for (i = 0; i < len; i += 1) {
 		if (players[i].id == id)
 			return players[i];
 	};

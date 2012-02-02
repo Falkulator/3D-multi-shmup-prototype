@@ -14,24 +14,24 @@ module.exports.gamestart = function(io) {
 	
 // Game Loop
 
-function update(io){
+function update(io) {
 	updateEntities(io);
 };
 	
-function start(io){
-	try{
-		setTimeout( function(){
+function start(io) {
+	try {
+		setTimeout( function() {
 		start(io);
 		update(io);
 		}, 30);
 	}
-	catch(err){
+	catch(err) {
 	}
 };
 	
 //Socket Handlers
 	
-function initSockets(io){	
+function initSockets(io) {	
 
 io.sockets.on('connection', function (socket) {
    socket.on('movePlayer', movePlayer);
@@ -46,15 +46,15 @@ io.sockets.on('connection', function (socket) {
 };
 
   
-  function onNewPlayer(data){
+  function onNewPlayer(data) {
   	console.log(data.player.user + " Has Entered");
   	var newplayer = new Player(data.player.user, 0, 0);
   	newplayer.id = this.id;
 	  newplayer.type = 0;
   	this.broadcast.emit('newplayer', {id: newplayer.id, user: newplayer.user});
-  	var i, existingPlayer;
+  	var i, existingPlayer, len = players.length;
 	
-	  for (i = 0; i < players.length; i++) {
+	  for (i = 0; i < len; i += 1) {
 		  existingPlayer = players[i];
 		  this.emit("newplayer", {id: existingPlayer.id, user: existingPlayer.user});
 	  };
@@ -64,7 +64,7 @@ io.sockets.on('connection', function (socket) {
  	  entities.push(newplayer);
   };
 
-  function respawn(data){
+  function respawn(data) {
 	  var newent = new Player(data.user, 0, 0);
   	newent.id = this.id;
 	  newent.type = 0;
@@ -75,11 +75,11 @@ io.sockets.on('connection', function (socket) {
 	  players.push(newent);
   };
 
-  function ping(d){
+  function ping(d) {
 	  this.emit('pong', {ping: d.ping, pong: 1});
   };
 
-  function onDisconnect(){
+  function onDisconnect() {
 	  var removePlayer = playerById(this.id);
   	console.log(removePlayer.user + " has left");
 	  // Player not found
@@ -96,37 +96,41 @@ io.sockets.on('connection', function (socket) {
   	this.broadcast.emit("removeplayer", {id: this.id});
   };
 
-  function removeEntity(i){
+  function removeEntity(i) {
     entities.splice(i, 1);
   };
 
-  function movePlayer(d){
+  function movePlayer(d) {
     var player = entityById(d.uid);
     if (d.m == 0){
 	    player.y += 0.1;
- 		}
- 		if (d.m == 1){
-			player.y += -0.1;
- 		}
+ 	}
+ 	if (d.m == 1){
+		player.y += -0.1;
+ 	}
   	if (d.m == 2){
-			player.x += -0.1;
+		player.x += -0.1;
   	}
   	if (d.m == 3){
-			player.x += 0.1;
+		player.x += 0.1;
   	}
   };
-  function rotPlayer(d){
+  function rotPlayer(d) {
     var player = entityById(d.uid);
     player.rot = d.rot;
   };
-  function trytofire(d){
+  function trytofire(d) {
     var player = entityById(d.uid);
     if (!player){return};
-    var bullet = player.fire(player.x,player.y,d.aim[0],d.aim[1]);
-    entities.push(bullet); 
+	player.firenow = Date.now();
+	if (player.firetime < player.firenow-player.firelast){
+    	var bullet = player.fire(player.x,player.y,d.aim[0],d.aim[1]);
+    	entities.push(bullet); 
+		player.firelast  = Date.now();
+	};
 	};
 
-function addEntity(entity){
+function addEntity(entity) {
 	var ent = {}
 	ent.u = entity.uid();
 	ent.x = entity.getX().toFixed(2);
@@ -140,7 +144,8 @@ function addEntity(entity){
 
 function initEntities() {
 	var ents = [];
-	for (i = 0; i < entities.length; i++) {
+	var len = entities.length;
+	for (i = 0; i < len; i += 1) {
 		ents[i] = {};
 		ents[i].u = entities[i].uid();
 		ents[i].x = entities[i].getX().toFixed(2);
@@ -154,7 +159,7 @@ function initEntities() {
 	return bcode;
 };
 //collision detection
-function intersectRect(A, B){
+function intersectRect(A, B) {
   var xOverlap = valueInRange(A.x, B.x, B.x + B.rad) ||
   valueInRange(B.x, A.x, A.x + A.rad) ||
   valueInRange(A.x, B.x - B.rad, B.x) ||
@@ -167,7 +172,7 @@ function intersectRect(A, B){
 
   return xOverlap && yOverlap;
 };
-function valueInRange(value, min, max){
+function valueInRange(value, min, max) {
 
   return (value <= max) && (value >= min);
 
@@ -175,26 +180,27 @@ function valueInRange(value, min, max){
 
 
 //executes updateEnt on each entity
-function updateEntities(io){
-var i;
+function updateEntities(io) {
+
+var i, len = entities.length;
 var jents = [];
-	for (i = 0; i < entities.length; i++) {
+	for (i = 0; i < len; i += 1) {
 		
 		entities[i].updateEnt();
 		if(entities[i].add){
 			io.sockets.emit("2", addEntity(entities[i]));
 			entities[i].add = false;
 		}
-		if(entities[i].isdead){
+		if(entities[i].isdead) {
 		  
 		};
-		if(entities[i].remove){
+		if(entities[i].remove) {
 		  io.sockets.emit("removeEnt", {uid: entities[i].uid()});
 		  removeEntity(i);
 			return;
 		};	
 
-		for(j=i+1; j< entities.length; j++){
+		for(j = i + 1; j < len; j += 1) {
 		  if (intersectRect(entities[i],entities[j]) && entities[i].id!==entities[j].id && entities[i].type!==entities[j].type){
 			  entities[i].ishit = true;
 			  entities[j].ishit = true;
@@ -202,7 +208,7 @@ var jents = [];
 		  };
 
 		};
-		if(!entities[i].remove){
+		if(!entities[i].remove) {
 		  jents[i] = {};
 		  jents[i].u = entities[i].uid();
 //Save bandwidth
@@ -233,8 +239,8 @@ var jents = [];
 
 
 function entityById(uid) {
-	var i;
-	for (i = 0; i < entities.length; i++) {
+	var i, len = entities.length;
+	for (i = 0; i < len; i += 1) {
 		if (entities[i].uid() == uid)
 			return entities[i];
 	};
@@ -243,8 +249,8 @@ function entityById(uid) {
 };
 // Find player by ID
 function playerById(id) {
-	var i;
-	for (i = 0; i < players.length; i++) {
+	var i, len = players.length;
+	for (i = 0; i < len; i += 1) {
 		if (players[i].id == id)
 			return players[i];
 	};

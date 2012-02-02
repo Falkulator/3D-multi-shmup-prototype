@@ -5,9 +5,12 @@ var Player = function(user, x, y){
 	this.y = y;
 	this.lasty;
 	this.user = user;
+	this.firetime = 250;
+	this.firelast = 0;
+	this.firenow;
 	this.id;
 	this.type;
-	this.lasttype;
+	this.add = true;
 	this.hp = 100;
 	this.lasthp;
 	this.ishit = false;
@@ -94,7 +97,7 @@ function updateBullet(){
   this.left = this.x-this.rad;
 	this.x += this.ax/1.2;
 	this.y += this.ay/1.2;
-	if(veclength(this.x-this.startx, this.y-this.starty)>100){
+	if(veclength(this.x-this.startx, this.y-this.starty)>50){
         this.remove = true;
 	}
 	if(this.ishit){
